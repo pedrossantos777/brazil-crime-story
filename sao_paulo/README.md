@@ -1,4 +1,7 @@
 # Geolocalização das ocorrências — SSP-SP (jan–ago/2026)
+Este repositório tem por objetivo disponibilizar a base de dados de ocorrências de São Paulo com os endereços geolocalizados e agregados por hexágonos em diferentes resoluções.
+Determinados crimes são propositalmente ocultados da geolocalização, como alternativa foi utilizada uma estratégia para inserir uma localização aproximada da delegacia de onde foi realizada a denúncia.
+
 
 Explica como a coluna de latitude/longitude do dataset de ocorrências criminais foi conferida e completada, e o que foi feito com os hexágonos H3 gerados a partir dela.
 
