@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Rscript -e ' *)",
+      "Bash(Rscript conferir_geolocalizacao_ocorrencias.R)",
+      "Bash(echo \"EXIT_CODE:$?\")",
+      "Bash(wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /format:list)",
+      "Bash(powershell -Command \"Get-CimInstance Win32_OperatingSystem | Select-Object FreePhysicalMemory,TotalVisibleMemorySize\")",
+      "Bash(ps -o pid,pcpu,pmem,etime,cmd -p 2132)",
+      "Bash(Rscript gerar_hexagonos_df_geo.R)"
+    ]
+  }
+}
