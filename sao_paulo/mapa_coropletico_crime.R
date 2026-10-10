@@ -101,6 +101,11 @@ resolver_valor <- function(valor_usuario, valores_possiveis, rotulo, abreviar_sa
 #'   8 (~0,74 km²) ou 9 (~0,11 km²).
 #' @param municipio Opcional. Nome do município (coluna `NOME_MUNICIPIO`)
 #'   para restringir o mapa. Se `NULL` (padrão), plota o estado inteiro.
+#'   Quando informado, sobrepõe também os limites de bairro via
+#'   `geobr::read_weighting_area()` (áreas de ponderação do censo) — usado
+#'   no lugar de `geobr::read_neighborhood()` porque este último não cobre
+#'   a capital. Na cidade de São Paulo essas áreas vêm nomeadas por bairro
+#'   (ex. "Sé", "Bixiga"); em outros municípios podem ser agregados maiores.
 #' @param n_classes Número de classes da escala Jenks (padrão 5).
 #' @param df Dataframe de origem (padrão: lê
 #'   dados/SPDadosCriminais_jan_ago2026_geo_hex.parquet).
@@ -139,6 +144,7 @@ mapa_coropletico_crime <- function(crime,
   crime_resolvido <- resolver_valor(crime, unique(df$NATUREZA_APURADA), "Crime")
 
   poligono_municipio <- NULL
+  poligono_bairros <- NULL
   base <- df
   if (!is.null(municipio)) {
     municipio_resolvido <- resolver_valor(municipio, unique(df$NOME_MUNICIPIO), "Município", abreviar_sao = TRUE)
@@ -146,6 +152,15 @@ mapa_coropletico_crime <- function(crime,
     cod_ibge_municipio <- base$COD_IBGE[1]
     poligono_municipio <- tryCatch(
       geobr::read_municipality(code_muni = cod_ibge_municipio, year = 2022, showProgress = FALSE),
+      error = function(e) NULL
+    )
+    # geobr::read_neighborhood() não cobre a capital (só municípios menores
+    # do estado) — usa as áreas de ponderação do censo como aproximação de
+    # bairro: no caso de São Paulo capital elas vêm nomeadas por bairro
+    # (ex. "Sé", "Bom Retiro", "Bixiga"), diferente de outros municípios
+    # onde podem ser agregados maiores sem correspondência direta a bairro.
+    poligono_bairros <- tryCatch(
+      geobr::read_weighting_area(year = 2022, code_weighting = cod_ibge_municipio, showProgress = FALSE),
       error = function(e) NULL
     )
   }
@@ -204,7 +219,11 @@ mapa_coropletico_crime <- function(crime,
 
   cols_num <- setdiff(names(grade), "h3_address")
   grade <- grade |> mutate(across(all_of(cols_num), \(x) coalesce(x, 0)))
-  grade$ocorrencias <- rowSums(grade[cols_num])
+  # A redistribuição proporcional por peso espacial (ver cabeçalho do script)
+  # produz estimativas fracionárias; arredonda para inteiro aqui, antes da
+  # classificação Jenks, para que as faixas da legenda sejam valores
+  # inteiros (contagem de ocorrências), e não frações do peso espacial.
+  grade$ocorrencias <- round(rowSums(grade[cols_num]))
   grade <- filter(grade, ocorrencias > 0)
 
   grade_sf <- cell_to_polygon(grade$h3_address, simple = FALSE) |>
@@ -232,6 +251,11 @@ mapa_coropletico_crime <- function(crime,
 
   mapa <- ggplot(grade_sf) +
     geom_sf(aes(fill = faixa), color = "white", linewidth = 0.05)
+
+  if (!is.null(poligono_bairros)) {
+    mapa <- mapa +
+      geom_sf(data = poligono_bairros, fill = NA, color = "grey50", linewidth = 0.15)
+  }
 
   if (!is.null(poligono_municipio)) {
     mapa <- mapa +

@@ -17,6 +17,8 @@ data/
 dados/
 raw_data/
 output/
+.claude/
+
 
 # --- Extensões de arquivos de dados pesados ---
 *.csv
